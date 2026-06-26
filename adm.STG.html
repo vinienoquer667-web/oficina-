@@ -41,7 +41,7 @@
             
             <div style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.1); padding: 5px 15px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.2);">
                 <label for="select-prof-sessao" style="color: white; font-size: 13px; font-weight: bold;">Sessão Ativa:</label>
-                <select id="select-prof-sessao" onchange="mudarProfessorSessao(this.value)" style="background: #2c3e50; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-weight: bold; cursor: pointer;">
+                <select id="select-prof-sessao" onchange="mudarProfessorSessao(this.value)" style="background: #2c3e50; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-weight: bold;">
                     <option value="Professor Orientador">Professor Orientador (Orin)</option>
                     <option value="Professor Supervisor">Professor Supervisor (Super)</option>
                 </select>
@@ -136,7 +136,7 @@
             const linhas = tabela.querySelectorAll('tr');
             let abertura = 0, andamento = 0, concluido = 0;
             linhas.forEach(linha => {
-                const badge = inlineBadge = linha.querySelector('.badge');
+                const badge = linha.querySelector('.badge');
                 if (badge) {
                     const status = badge.innerText.toLowerCase();
                     if (status === "em andamento") andamento++;
