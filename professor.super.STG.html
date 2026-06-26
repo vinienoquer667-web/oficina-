@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IFSertãoPE - SGE (Professor Supervisor)</title>
+    <link rel="stylesheet" href="professor.super.STG.css">
+    <style>
+        .sidebar {
+            left: -250px;
+            transition: all 0.3s ease;
+        }
+        .content {
+            margin-left: 0;
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+
+    <button id="btn-toggle-menu" class="btn-menu-trigger">☰</button>
+
+    <nav class="sidebar" id="sidebar">
+        <div class="logo"><h2>SGE Estágios</h2></div>
+        <ul class="nav-links">
+            <li class="section-title">PEDAGÓGICO</li>
+            <li onclick="navegar('view-professor')" style="cursor:pointer">Monitorar Estagiários</li>
+            <li onclick="navegar('view-atividades')" style="cursor:pointer">Lançar Atividades</li>
+            <li class="section-title">SISTEMA</li>
+            <li onclick="navegar('view-validar')" style="cursor:pointer">Gerenciar Fluxo</li>
+        </ul>
+    </nav>
+
+    <main class="content" id="main-content">
+        <header class="top-bar">
+            <img src="img/if.png" alt="logo" style="margin-right: 15px;">
+            <h1 id="main-title">Professor Supervisor</h1>
+        </header>
+
+        <section id="view-professor" class="view-section active">
+            <div class="table-section" style="margin-bottom: 20px; display: flex; align-items: center; gap: 20px; border-left: 8px solid #05c46b;">
+                <div style="width: 70px; height: 70px; background: #2c3e50; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 20px;">PS</div>
+                <div>
+                    <h2>Painel de Supervisão</h2>
+                    <p>Controle do progresso técnico dos estagiários.</p>
+                </div>
+            </div>
+
+            <div class="table-section">
+                <table style="margin-top: 15px;">
+                    <thead>
+                        <tr>
+                            <th>Estagiário</th>
+                            <th>Empresa</th>
+                            <th>Status Atual</th>
+                            <th>Documentos Enviados</th>
+                            <th>Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabela-prof-alunos"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="view-atividades" class="view-section">
+            <div class="table-section">
+                <h2>Lançar Nova Atividade/Aviso</h2>
+                <p style="color: gray; margin-bottom: 15px;">A atividade enviada aparecerá instantaneamente no portal do aluno correspondente.</p>
+                
+                <div id="container-formulario-atividade" style="background: #f9f9f9; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
+                    <div id="formulario-conteudo">
+                        <label for="at-destino" style="display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px;">Enviar para:</label>
+                        <select id="at-destino" style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; background: white; font-weight: bold;">
+                        </select>
+
+                        <input type="text" id="at-titulo" placeholder="Título da Atividade" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px;">
+                        <textarea id="at-desc" rows="3" placeholder="Instruções para o aluno..." style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: sans-serif;"></textarea>
+                        <button class="btn-primary" onclick="enviarAtividade()" style="background: #05c46b; width: 200px; color: white; border: none; padding: 10px; cursor: pointer; font-weight: bold; border-radius: 4px;">Enviar para Alunos</button>
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 30px;">Atividades Enviadas</h3>
+                <table style="margin-top: 10px;">
+                    <thead>
+                        <tr><th>Data</th><th>Destinatário</th><th>Título</th><th>Ação</th></tr>
+                    </thead>
+                    <tbody id="tabela-atividades-historico"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="view-validar" class="view-section">
+            <div class="table-section">
+                <h2>Gerenciar Status do Fluxo</h2>
+                <table>
+                    <thead><tr><th>Nome / Orientador</th><th>Empresa</th><th>Status</th><th>Resp.</th><th>Ação</th></tr></thead>
+                    <tbody id="tabela-estagios"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        let PROFESSOR_LOGADO = localStorage.getItem('sge_professor_logado') || "Professor Supervisor";
+
+        const estiloBtn = "padding: 5px 10px; border-radius: 4px; border: none; cursor: pointer; font-weight: bold; margin-right: 5px; font-size: 12px; color: white;";
+        const sb = document.getElementById('sidebar');
+        const ct = document.getElementById('main-content');
+
+        function atualizarTituloPainel() {
+            document.getElementById('main-title').innerText = `Painel Supervisor: ${PROFESSOR_LOGADO}`;
+        }
+
+        // Lógica do Menu Hover (Passar o mouse)
+        document.getElementById('btn-toggle-menu').addEventListener('mouseenter', () => { sb.style.left = "0"; ct.style.marginLeft = "250px"; });
+        sb.addEventListener('mouseleave', () => { sb.style.left = "-250px"; ct.style.marginLeft = "0"; });
+
+        function navegar(id) {
+            document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            
+            // Força a sincronização dos dados ao alternar qualquer aba
+            carregarProfessor();
+            carregar();
+            carregarAtividadesProfessor();
+        }
+
+        function obterMeusAlunos() {
+            const dados = JSON.parse(localStorage.getItem('sge_data') || '[]');
+            return dados.filter(x => x.professor && x.professor.trim().toLowerCase() === PROFESSOR_LOGADO.trim().toLowerCase());
+        }
+
+        function carregarProfessor() {
+            const meusAlunos = obterMeusAlunos();
+            const tbody = document.getElementById('tabela-prof-alunos');
+            if(!tbody) return;
+            tbody.innerHTML = '';
+            if(meusAlunos.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:gray; padding:20px;">Sem alunos vinculados.</td></tr>`;
+                return;
+            }
+            meusAlunos.forEach(d => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td><strong>${d.nome}</strong></td><td>${d.empresa}</td><td><span>${d.status}</span></td><td>📄 Relatorio.pdf</td><td><button style="background:#27ae60; color:white; border:none; padding:5px; border-radius:4px; cursor:pointer;" onclick="alert('Validado!')">Validar</button></td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function carregar() {
+            const dados = JSON.parse(localStorage.getItem('sge_data') || '[]');
+            const tbody = document.getElementById('tabela-estagios');
+            if(!tbody) return;
+            tbody.innerHTML = '';
+            dados.forEach(d => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td><strong>${d.nome}</strong></td><td>${d.empresa}</td><td><span>${d.status}</span></td><td>${d.responsavel || 'Admin'}</td><td>--</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function enviarAtividade() {
+            const destino = document.getElementById('at-destino').value;
+            const titulo = document.getElementById('at-titulo').value;
+            const desc = document.getElementById('at-desc').value;
+
+            if(!destino || destino === "") {
+                return alert("⚠️ Selecione primeiro o destinatário antes de enviar!");
+            }
+            if(!titulo || !desc) return alert("Preencha todos os campos!");
+
+            const lista = JSON.parse(localStorage.getItem('sge_atividades') || '[]');
+            lista.push({
+                id: Date.now(), data: new Date().toLocaleDateString('pt-BR'),
+                professor: PROFESSOR_LOGADO, destinatario: destino, titulo: titulo, desc: desc
+            });
+            localStorage.setItem('sge_atividades', JSON.stringify(lista));
+            alert("Atividade enviada!");
+            document.getElementById('at-titulo').value = "";
+            document.getElementById('at-desc').value = "";
+            carregarAtividadesProfessor();
+        }
+
+        function carregarAtividadesProfessor() {
+            const meusAlunos = obterMeusAlunos();
+            const containerForm = document.getElementById('container-formulario-atividade');
+            if(!containerForm) return;
+
+            if (meusAlunos.length === 0) {
+                containerForm.innerHTML = `<div id="sub-aviso" style="color:red; text-align:center; font-weight:bold; padding: 10px;">⚠️ Vincule um aluno primeiro para enviar atividades.</div>`;
+            } else {
+                containerForm.innerHTML = `
+                    <div id="formulario-conteudo">
+                        <label for="at-destino" style="display: block; margin-bottom: 5px; font-weight: bold; font-size: 14px;">Enviar para:</label>
+                        <select id="at-destino" style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; background: white; font-weight: bold;"></select>
+                        <input type="text" id="at-titulo" placeholder="Título da Atividade" style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px;">
+                        <textarea id="at-desc" rows="3" placeholder="Instruções..." style="width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px;"></textarea>
+                        <button class="btn-primary" onclick="enviarAtividade()" style="background: #05c46b; padding: 10px 20px; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Publicar Atividade</button>
+                    </div>
+                `;
+
+                const select = document.getElementById('at-destino');
+                if (select) {
+                    select.innerHTML = '<option value="">-- Pra quem vai mandar ? --</option>';
+                    meusAlunos.forEach(a => {
+                        select.innerHTML += `<option value="${a.nome}">👤 Aluno: ${a.nome}</option>`;
+                    });
+                }
+            }
+
+            const lista = JSON.parse(localStorage.getItem('sge_atividades') || '[]');
+            const tbody = document.getElementById('tabela-atividades-historico');
+            if(!tbody) return;
+            tbody.innerHTML = '';
+            
+            lista.filter(at => at.professor === PROFESSOR_LOGADO).reverse().forEach(at => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${at.data}</td><td><strong>${at.destinatario}</strong></td><td>${at.titulo}</td><td><button onclick="removerAtividade(${at.id})" style="background:red; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Excluir</button></td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function removerAtividade(id) {
+            let lista = JSON.parse(localStorage.getItem('sge_atividades') || '[]');
+            lista = lista.filter(at => at.id !== id);
+            localStorage.setItem('sge_atividades', JSON.stringify(lista));
+            carregarAtividadesProfessor();
+        }
+
+        window.onload = () => { 
+            sb.style.left = "-250px";
+            ct.style.marginLeft = "0";
+            atualizarTituloPainel(); 
+            carregar(); 
+            carregarProfessor(); 
+            carregarAtividadesProfessor();
+        };
+
+        window.addEventListener('storage', () => {
+            PROFESSOR_LOGADO = localStorage.getItem('sge_professor_logado') || "Professor Supervisor";
+            atualizarTituloPainel(); 
+            carregarProfessor(); 
+            carregar();
+            carregarAtividadesProfessor();
+        });
+    </script>
+</body>
+</html>

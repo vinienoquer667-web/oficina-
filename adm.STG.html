@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IFSertãoPE - SGE (Administração)</title>
+    <link rel="stylesheet" href="adm.STG.css">
+    <style>
+        /* Força o menu a iniciar escondido e com transição suave */
+        .sidebar {
+            left: -250px;
+            transition: all 0.3s ease;
+        }
+        .content {
+            margin-left: 0;
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+
+    <button id="btn-toggle-menu" class="btn-menu-trigger">☰</button>
+
+    <nav class="sidebar" id="sidebar">
+        <div class="logo"><h2>SGE Estágios</h2></div>
+        <ul class="nav-links">
+            <li class="section-title">ADMINISTRAÇÃO</li>
+            <li>Cadastrar Cursos/Empresas</li>
+            <li>Validar Novos Estágios</li>
+            <li class="section-title">PEDAGÓGICO</li>
+            <li onclick="irParaPainelProfessor()" style="cursor:pointer; color: #007bff; font-weight: bold;">Acessar Painel Professor ➔</li>
+        </ul>
+    </nav>
+
+    <main class="content" id="main-content">
+        <header class="top-bar" style="display: flex; justify-content: space-between; align-items: center; padding-right: 20px;">
+            <div style="display: flex; align-items: center;">
+                <img src="img/if.png" alt="logo" style="margin-right: 15px;">
+                <h1>IFSertãoPE - SGE (Painel Admin)</h1>
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.1); padding: 5px 15px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.2);">
+                <label for="select-prof-sessao" style="color: white; font-size: 13px; font-weight: bold;">Sessão Ativa:</label>
+                <select id="select-prof-sessao" onchange="mudarProfessorSessao(this.value)" style="background: #2c3e50; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-weight: bold; cursor: pointer;">
+                    <option value="Professor Orientador">Professor Orientador (Orin)</option>
+                    <option value="Professor Supervisor">Professor Supervisor (Super)</option>
+                </select>
+            </div>
+        </header>
+        
+        <section class="stats-container">
+            <div class="card border-blue"><h3>Abertura</h3><p id="count-abertura">0 Pendentes</p></div>
+            <div class="card border-yellow"><h3>Em Andamento</h3><p id="count-andamento">0 Aguardando</p></div>
+            <div class="card border-green"><h3>Concluídos</h3><p id="count-concluido">0 Finalizados</p></div>
+            <div class="card border-red"><h3>Total</h3><p id="count-total">0 Registros</p></div>
+        </section>
+
+        <section class="table-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h2>Fluxo de Estágios Global</h2>
+                <button id="btn-adicionar" style="background: #007bff; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer;">+ Adicionar Novo Aluno</button>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Estagiário / Tipo / Orientador</th>
+                        <th>Empresa</th>
+                        <th>Status do Fluxo</th>
+                        <th>Responsável Atual</th>
+                        <th>Ação Próxima</th>
+                    </tr>
+                </thead>
+                <tbody id="tabela-estagios"></tbody>
+            </table>
+        </section>
+    </main>
+
+    <script>
+        const estiloBotoes = "width: 100px; height: 35px; border-radius: 4px; border: none; cursor: pointer; font-weight: bold; transition: 0.3s; margin-right: 5px;";
+        const tabela = document.getElementById('tabela-estagios');
+        const sb = document.getElementById('sidebar');
+        const ct = document.getElementById('main-content');
+
+        // Lógica do Menu Hover (Passar o mouse)
+        document.getElementById('btn-toggle-menu').addEventListener('mouseenter', () => { sb.style.left = "0"; ct.style.marginLeft = "250px"; });
+        sb.addEventListener('mouseleave', () => { sb.style.left = "-250px"; ct.style.marginLeft = "0"; });
+
+        // --- SISTEMA DE CONTROLE DE SESSÃO DO PROFESSOR ---
+        function inicializarControleProfessor() {
+            if (!localStorage.getItem('sge_professor_logado')) {
+                localStorage.setItem('sge_professor_logado', "Professor Orientador");
+            }
+            document.getElementById('select-prof-sessao').value = localStorage.getItem('sge_professor_logado');
+        }
+
+        function mudarProfessorSessao(novoNome) {
+            localStorage.setItem('sge_professor_logado', novoNome);
+            let arquivoAlvo = novoNome === "Professor Supervisor" ? "professor.super.STG.html" : "professor.orin.STG.html";
+            alert(`Sessão alterada!\nO painel ativo agora é o de "${novoNome}".\nArquivo correspondente: ${arquivoAlvo}`);
+            carregarDados();
+        }
+
+        function irParaPainelProfessor() {
+            let atual = localStorage.getItem('sge_professor_logado') || "Professor Orientador";
+            let arquivoAlvo = atual === "Professor Supervisor" ? "professor.super.STG.html" : "professor.orin.STG.html";
+            window.location.href = arquivoAlvo;
+        }
+
+        function salvarDados() {
+            const linhas = [];
+            tabela.querySelectorAll('tr').forEach(linha => {
+                linhas.push({
+                    nome: linha.dataset.nome,
+                    empresa: linha.cells[1].innerText,
+                    status: linha.querySelector('.badge').innerText,
+                    badgeClass: linha.querySelector('.badge').className,
+                    responsavel: linha.cells[3].innerText,
+                    tipo: linha.dataset.tipo,
+                    professor: linha.dataset.professor
+                });
+            });
+            localStorage.setItem('sge_data', JSON.stringify(linhas));
+            atualizarCards();
+        }
+
+        function carregarDados() {
+            const dados = JSON.parse(localStorage.getItem('sge_data') || "[]");
+            tabela.innerHTML = "";
+            dados.forEach(item => {
+                adicionarLinhaNaTabela(item.nome, item.empresa, item.status, item.badgeClass, item.responsavel, item.tipo, item.professor);
+            });
+            atualizarCards();
+        }
+
+        function atualizarCards() {
+            const linhas = tabela.querySelectorAll('tr');
+            let abertura = 0, andamento = 0, concluido = 0;
+            linhas.forEach(linha => {
+                const badge = inlineBadge = linha.querySelector('.badge');
+                if (badge) {
+                    const status = badge.innerText.toLowerCase();
+                    if (status === "em andamento") andamento++;
+                    else if (status === "concluído") concluido++;
+                    else abertura++;
+                }
+            });
+            document.getElementById('count-abertura').innerText = `${abertura} Pendentes`;
+            document.getElementById('count-andamento').innerText = `${andamento} Aguardando`;
+            document.getElementById('count-concluido').innerText = `${concluido} Finalizados`;
+            document.getElementById('count-total').innerText = `${linhas.length} Registros`;
+        }
+
+        function adicionarLinhaNaTabela(nome, empresa, statusTxt = "Abertura", badgeClass = "badge status-abertura", responsavel = "Admin", tipo = "Obrigatório", professor = "") {
+            const tr = document.createElement('tr');
+            tr.dataset.nome = nome;
+            tr.dataset.tipo = tipo;
+            tr.dataset.professor = professor || ""; 
+            
+            const txtProf = professor ? professor : `<span style="color:#e74c3c; font-weight:bold;">Aguardando Orientador...</span>`;
+
+            tr.innerHTML = `
+                <td>
+                    <strong>${nome}</strong><br>
+                    <small style="color:gray">Tipo: ${tipo}</small><br>
+                    <small style="color:#007bff">Orientador: ${txtProf}</small>
+                </td>
+                <td>${empresa}</td>
+                <td><span class="${badgeClass}">${statusTxt}</span></td>
+                <td>${responsavel}</td>
+                <td class="acoes"></td>
+            `;
+            renderizarBotoes(tr, statusTxt);
+            tabela.appendChild(tr);
+        }
+
+        function renderizarBotoes(linha, status) {
+            const celulaAcao = linha.querySelector('.acoes');
+            const badge = linha.querySelector('.badge');
+            celulaAcao.innerHTML = "";
+
+            const btnExcluir = document.createElement('button');
+            btnExcluir.innerText = "Excluir";
+            btnExcluir.style.cssText = estiloBotoes + "background: #e74c3c; color: white;";
+            btnExcluir.onclick = () => { if(confirm("Excluir?")) { linha.remove(); salvarDados(); } };
+
+            if (status === "Abertura") {
+                const btnAprovar = document.createElement('button');
+                btnAprovar.innerText = "Aprovar";
+                btnAprovar.style.cssText = estiloBotoes + "background: #007bff; color: white;";
+                btnAprovar.onclick = () => {
+                    badge.innerText = "Em andamento";
+                    badge.className = "badge status-plano";
+                    renderizarBotoes(linha, "Em andamento");
+                    salvarDados();
+                };
+                celulaAcao.appendChild(btnAprovar);
+            } else if (status === "Em andamento") {
+                const btnFeito = document.createElement('button');
+                btnFeito.innerText = "Concluir";
+                btnFeito.style.cssText = estiloBotoes + "background: #27ae60; color: white;";
+                btnFeito.onclick = () => {
+                    badge.innerText = "Concluído";
+                    badge.className = "badge status-manutencao";
+                    renderizarBotoes(linha, "Concluído");
+                    salvarDados();
+                };
+                celulaAcao.appendChild(btnFeito);
+            }
+            celulaAcao.appendChild(btnExcluir);
+        }
+
+        document.getElementById('btn-adicionar').addEventListener('click', () => {
+            const nome = prompt("Nome do Estagiário:");
+            const empresa = prompt("Nome da Empresa:");
+            const tipo = prompt("Tipo de Estágio (Obrigatório):", "Obrigatório");
+            
+            if (nome && empresa) {
+                adicionarLinhaNaTabela(nome, empresa, "Abertura", "badge status-abertura", "Admin", tipo, "");
+                salvarDados();
+            }
+        });
+
+        window.onload = () => {
+            // Garante o estado inicial fechado via script por segurança
+            sb.style.left = "-250px";
+            ct.style.marginLeft = "0";
+            inicializarControleProfessor();
+            carregarDados();
+        };
+
+        window.addEventListener('storage', () => carregarDados());
+    </script>
+</body>
+</html>

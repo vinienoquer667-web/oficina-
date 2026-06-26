@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SGE - Área do Aluno</title>
+    <link rel="stylesheet" href="alunos.STG.css">
+</head>
+<body>
+
+    <button id="btn-toggle-menu" class="btn-menu-trigger">☰</button>
+
+    <nav class="sidebar" id="sidebar">
+        <div class="logo"><h2>SGE Aluno</h2></div>
+        <ul class="nav-links">
+            <li class="section-title">MEU PAINEL</li>
+            <li onclick="navegar('aba-status')" style="cursor:pointer">Início / Status</li>
+            <li onclick="navegar('aba-documentos')" style="cursor:pointer">Meus Documentos</li>
+            <li onclick="navegar('aba-vagas')" style="cursor:pointer">Vagas de Estágio</li>
+            
+            <li class="section-title">CONFIGURAÇÕES</li>
+            <li>Meu Perfil</li>
+            <li onclick="window.location.href='index.php'" style="cursor:pointer">Sair</li>
+        </ul>
+    </nav>
+
+    <main class="content" id="main-content">
+        <header class="top-bar">
+            <img src="img/if.png" alt="logo">
+            <h1>Portal do Estudante</h1>
+        </header>
+
+        <section id="aba-status" class="view-section active">
+            <div class="table-section" style="margin-bottom: 25px;">
+                <h2>Meu Estágio Atual</h2>
+                <div id="status-container" style="margin-top: 20px;"></div>
+            </div>
+
+            <div class="table-section" style="margin-bottom: 25px; border-top: 4px solid #f1c40f;">
+                <h2>Mural de Atividades (Professor)</h2>
+                <div id="atividades-professor-container" style="margin-top: 15px;">
+                    <p style="color: gray;">Nenhuma atividade pendente.</p>
+                </div>
+            </div>
+
+            <div class="stats-container">
+                <div class="card border-blue">
+                    <h3>Horas Totais</h3>
+                    <p>400 Horas</p>
+                </div>
+                <div class="card border-green">
+                    <h3>Horas Cumpridas</h3>
+                    <p>120 Horas</p>
+                </div>
+                <div class="card border-yellow">
+                    <h3>Próximo Relatório</h3>
+                    <p>Em 15 dias</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="aba-documentos" class="view-section">
+            <div class="table-section">
+                <h2>Documentação do Estágio</h2>
+                <p id="doc-alerta" style="margin-bottom: 15px; color: #666;"></p>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Documento</th>
+                            <th>Tipo</th>
+                            <th>Status no Sistema</th>
+                            <th>Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabela-documentos-aluno"></tbody>
+                </table>
+
+                <div style="margin-top: 30px; padding: 20px; border: 2px dashed #05c46b; border-radius: 10px; text-align: center;">
+                    <h3>Enviar Novo Documento</h3>
+                    <input type="file" id="fileInput" style="margin-top: 10px;">
+                    <br><br>
+                    <button class="btn-primary" onclick="alert('Documento enviado para análise do Orientador!')">Fazer Upload</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="aba-vagas" class="view-section">
+            <div class="table-section">
+                <h2>Vagas Disponíveis</h2>
+                <p>Nenhuma vaga disponível para o seu curso no momento.</p>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const sb = document.getElementById('sidebar');
+        const ct = document.getElementById('main-content');
+
+        // --- LÓGICA DO MENU ---
+        sb.style.transition = "all 0.3s ease";
+        ct.style.transition = "all 0.3s ease";
+
+        document.getElementById('btn-toggle-menu').addEventListener('mouseenter', () => {
+            sb.style.left = "0";
+            ct.style.marginLeft = "250px";
+        });
+
+        sb.addEventListener('mouseleave', () => {
+            sb.style.left = "-250px";
+            ct.style.marginLeft = "0";
+        });
+
+        function navegar(id) {
+            document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+            const aba = document.getElementById(id);
+            if(aba) aba.classList.add('active');
+        }
+
+        // --- FUNÇÃO PARA RECEBER ATIVIDADES DO PROFESSOR ---
+        function carregarAtividadesDoProfessor() {
+            const atividades = JSON.parse(localStorage.getItem('sge_atividades') || '[]');
+            const container = document.getElementById('atividades-professor-container');
+            
+            if (atividades.length > 0) {
+                container.innerHTML = ''; 
+                
+                atividades.reverse().forEach(at => {
+                    const item = document.createElement('div');
+                    item.style.cssText = "background: #fffbe6; border: 1px solid #ffe58f; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 5px solid #f1c40f;";
+                    item.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <strong style="color: #856404; font-size: 16px;">${at.titulo}</strong>
+                            <small style="color: #999;">${at.data}</small>
+                        </div>
+                        <p style="margin-top: 8px; color: #555; line-height: 1.4;">${at.desc}</p>
+                        <button onclick="alert('Funcionalidade de resposta em breve!')" style="margin-top: 10px; font-size: 11px; cursor: pointer; padding: 4px 8px;">Responder Atividade</button>
+                    `;
+                    container.appendChild(item);
+                });
+            } else {
+                container.innerHTML = "<p style='color: gray;'>Nenhuma atividade pendente enviada pelo seu orientador.</p>";
+            }
+        }
+
+        // --- SINCRONIZAÇÃO COM DADOS DO ESTÁGIO ---
+        function carregarDadosSincronizados() {
+            const dados = JSON.parse(localStorage.getItem('sge_data') || '[]');
+            const container = document.getElementById('status-container');
+            const tabelaDocs = document.getElementById('tabela-documentos-aluno');
+            
+            if (dados.length > 0) {
+                const meuEstagio = dados[0]; // Pega o primeiro cadastro fictício para testes
+                const professorOrientador = meuEstagio.professor || "Não definido"; // <-- Lê o professor salvo
+
+                container.innerHTML = `
+                    <div style="background: #f4f4f4; padding: 20px; border-radius: 8px; border-left: 8px solid #007bff;">
+                        <h3 style="color: #2c3e50;">Bem-vindo(a), ${meuEstagio.nome}</h3>
+                        <p><strong>Empresa:</strong> ${meuEstagio.empresa}</p>
+                        <p><strong>Tipo de Estágio:</strong> ${meuEstagio.tipo || 'Obrigatório'}</p>
+                        <p><strong>Professor Orientador:</strong> <span style="color:#007bff; font-weight:bold;">${professorOrientador}</span></p> <p><strong>Status Atual:</strong> <span class="badge ${meuEstagio.badgeCls || meuEstagio.badgeClass}">${meuEstagio.status}</span></p>
+                        <p style="margin-top:10px; font-size: 14px; color: #555;">
+                            Responsável no Sistema: <strong>${meuEstagio.resp || meuEstagio.responsavel}</strong>
+                        </p>
+                    </div>
+                `;
+
+                tabelaDocs.innerHTML = `
+                    <tr>
+                        <td>Plano de Trabalho</td>
+                        <td>PDF</td>
+                        <td><span class="badge ${meuEstagio.badgeCls || meuEstagio.badgeClass}">${meuEstagio.status}</span></td>
+                        <td><button class="btn-primary" onclick="alert('Baixando Modelo...')">Baixar</button></td>
+                    </tr>
+                `;
+            } else {
+                container.innerHTML = "<p>Nenhum estágio ativo encontrado no sistema.</p>";
+                tabelaDocs.innerHTML = "<tr><td colspan='4'>Nenhum documento encontrado.</td></tr>";
+            }
+        }
+
+        // Inicialização
+        window.onload = () => {
+            sb.style.left = "-250px";
+            ct.style.marginLeft = "0";
+            carregarDadosSincronizados();
+            carregarAtividadesDoProfessor();
+        };
+
+        window.addEventListener('storage', () => {
+            carregarDadosSincronizados();
+            carregarAtividadesDoProfessor();
+        });
+    </script>
+</body>
+</html>

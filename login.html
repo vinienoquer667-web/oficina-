@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IFSertãoPE - SGE | Login</title>
+    <link rel="stylesheet" href="login.css">
+</head>
+<body>
+
+    <div class="login-container">
+        <div class="brand-section">
+            <img src="if.png" alt="Logo IFSertãoPE">
+            <h1>SGE Estágios</h1>
+            <p>Sistema de Gestão de Estágios</p>
+        </div>
+
+        <form id="loginForm" action="login.php" method="POST">
+            
+            <div class="form-group">
+                <label for="username">Usuário (CPF)</label>
+                <input type="text" id="username" name="username" placeholder="Digite o seu usuário" required autocomplete="username" maxlength="14">
+            </div>
+
+            <div class="form-group">
+                <label for="password">Senha</label>
+                <input type="password" id="password" name="password" placeholder="Digite a sua senha" required autocomplete="current-password">
+            </div>
+
+            <div class="options-row">
+                <label class="remember-me">
+                    <input type="checkbox" name="remember"> Lembrar-me
+                </label>
+                <a href="recuperacao_senha.html" class="forgot-password">Esqueceu-se da senha?</a>
+            </div>
+
+            <div id="error-message" style="color: #e74c3c; margin-bottom: 15px; font-size: 0.85rem; text-align: left; display: none; font-weight: 600;"></div>
+
+            <button type="submit" id="btnSubmit" class="btn-login">Entrar</button>
+        </form>
+
+        <div class="footer-links">
+            <p>Novo por aqui? <a href="cadastro.html">Cadastre o seu perfil</a></p>
+        </div>
+    </div>
+
+<script>
+    // Máscara CPF (Melhorada para evitar bugs de cursor)
+    const cpfInput = document.getElementById('username');
+
+    cpfInput.addEventListener('input', function () {
+        let valor = this.value.replace(/\D/g, '');
+
+        valor = valor.replace(/(\d{3})(\d)/, '$1.$2');
+        valor = valor.replace(/(\d{3})(\d)/, '$1.$2');
+        valor = valor.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+
+        this.value = valor;
+    });
+
+    document.getElementById('loginForm').addEventListener('submit', async function(event) {
+        event.preventDefault();
+
+        const errorDiv = document.getElementById('error-message');
+        const btnSubmit = document.getElementById('btnSubmit');
+        
+        const usuarioFormatado = document.getElementById('username').value.trim();
+        const usuarioLimpo = usuarioFormatado.replace(/\D/g, ''); 
+        const senha = document.getElementById('password').value;
+
+        errorDiv.style.display = 'none';
+
+        if(usuarioLimpo === '' || senha === '') {
+            errorDiv.innerText = 'Preencha todos os campos.';
+            errorDiv.style.display = 'block';
+            return;
+        }
+
+        // UX: Desativa o botão para evitar cliques múltiplos
+        btnSubmit.disabled = true;
+        btnSubmit.innerText = 'Autenticando...';
+        btnSubmit.style.opacity = '0.7';
+
+        try {
+            const response = await fetch('login.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    username: usuarioLimpo, 
+                    password: senha
+                })
+            });
+
+            const contentType = response.headers.get("content-type");
+            if (!contentType || !contentType.includes("application/json")) {
+                throw new TypeError("Resposta inválida");
+            }
+
+            const dados = await response.json();
+
+            if(response.ok) {
+                // Guarda com segurança as informações essenciais vindas do banco PHP
+                localStorage.setItem('usuario_id', dados.usuario.id);
+                localStorage.setItem('usuario_nome', dados.usuario.nome);
+                localStorage.setItem('usuario_perfil', dados.usuario.perfil);
+                
+                // Salva o e-mail retornado pelo backend para alimentar os painéis específicos de cada perfil
+                if(dados.usuario.email) {
+                    localStorage.setItem('usuario_email', dados.usuario.email);
+                }
+
+                // Redirecionamento dinâmico baseado no perfil logado
+                switch(dados.usuario.perfil) {
+                    case 'admin':
+                        window.location.href = 'admin.STG.php';
+                        break;
+                    case 'orientador':
+                        // Define o nome de exibição no painel do orientador
+                        localStorage.setItem('sge_professor_logado', dados.usuario.nome);
+                        window.location.href = 'professor.orin.STG.html';
+                        break;
+                    case 'supervisor':
+                        // Define o nome de exibição no painel do supervisor
+                        localStorage.setItem('sge_professor_logado', dados.usuario.nome);
+                        window.location.href = 'professor.super.STG.html';
+                        break;
+                    case 'estagiario':
+                        window.location.href = 'alunos.STG.php';
+                        break;
+                    default:
+                        window.location.href = 'login.html';
+                }
+            } else {
+                errorDiv.innerText = dados.mensagem || 'Usuário ou senha incorretos.';
+                errorDiv.style.display = 'block';
+                
+                btnSubmit.disabled = false;
+                btnSubmit.innerText = 'Entrar';
+                btnSubmit.style.opacity = '1';
+            }
+
+        } catch(error) {
+            // Mensagem limpa e amigável em caso de qualquer falha estrutural ou de rede
+            errorDiv.innerText = 'Usuário ou senha incorretos.';
+            errorDiv.style.display = 'block';
+            
+            btnSubmit.disabled = false;
+            btnSubmit.innerText = 'Entrar';
+            btnSubmit.style.opacity = '1';
+        }
+    });
+</script>
+</body>
+</html>
